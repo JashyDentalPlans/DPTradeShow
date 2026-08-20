@@ -562,9 +562,9 @@ table.stafftable tr.hot td{background:rgba(255,93,108,.08);}
         </div>
       </div>
       <div class="boards">
-        <div class="board" id="boardTrivia"><h4>&#129463; TRIVIA LADDER TOP 5</h4><ol></ol></div>
-        <div class="board" id="boardCatcher"><h4>&#129689; SAVINGS CATCHER TOP 5</h4><ol></ol></div>
-        <div class="board" id="boardChamps"><h4>&#127942; BOOTH CHAMPIONS (BOTH GAMES)</h4><ol></ol></div>
+        <div class="board" id="boardTrivia"><h4>&#129463; TRIVIA LADDER TOP&nbsp;5</h4><ol></ol></div>
+        <div class="board" id="boardCatcher"><h4>&#129689; SAVINGS CATCHER TOP&nbsp;5</h4><ol></ol></div>
+        <div class="board" id="boardChamps"><h4>&#127942; BOOTH CHAMPIONS (BOTH&nbsp;GAMES)</h4><ol></ol></div>
       </div>
       <details class="dsp101">
         <summary><span class="tri">&#9654;</span> NEW TO DENTAL SAVINGS PLANS? THE WHOLE IDEA IN 3 STEPS</summary>
@@ -1766,6 +1766,10 @@ const GameHost = {
     $("#hudPause").addEventListener("click", () => this.setPaused(!this.paused));
     $("#hudMute").addEventListener("click", () => AudioSys.toggle());
     window.addEventListener("resize", () => { if (this.game && this.game.onResize) this.game.onResize(); });
+    /* if the tab or window is hidden mid-run, pause cleanly instead of letting the clock crawl */
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "hidden" && this.running && !this.paused) this.setPaused(true);
+    });
   },
   launch(game) {
     this.game = game;
@@ -3254,7 +3258,7 @@ const SavingsCatcher = {
           { k: "Catches", v: String(S.goodCaught) },
           { k: "Best combo", v: "x" + Math.min(3, S.bestCombo >= 10 ? 3 : (S.bestCombo >= 5 ? 2 : 1)) + " (" + S.bestCombo + ")" },
           { k: "Paperwork hits", v: String(S.badCaught) },
-          { k: "Pile height", v: (S.pileStage + 1) + " rows" }
+          { k: "Pile height", v: (S.pileStage + 1) + (S.pileStage === 0 ? " row" : " rows") }
         ],
         takeaway: "<b>Everything you caught is what a dental savings plan brings a practice:</b> new patients who pay at time of service, no waiting periods, no annual maximums, zero claims paperwork. Everything red is what it removes. Dollar amounts in the game are illustrative.",
         max: ""
