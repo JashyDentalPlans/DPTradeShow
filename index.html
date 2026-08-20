@@ -482,18 +482,18 @@ table.stafftable tr.hot td{background:rgba(255,93,108,.08);}
       <form class="leadform" id="leadForm" novalidate>
         <p class="privacy">We use this to follow up about free practice marketing tools and the prize draw. Nothing else, no spam.</p>
         <div class="frow">
-          <div><label for="fName">Name <span class="req">*</span></label>
-          <input id="fName" autocomplete="off" placeholder="Jordan Smith" maxlength="60"></div>
+          <div><label for="fName">Your name <span class="req">*</span></label>
+          <input id="fName" autocomplete="off" maxlength="60"></div>
           <div><label for="fPractice">Practice name <span class="req">*</span></label>
-          <input id="fPractice" autocomplete="off" placeholder="Bright Smiles Dental" maxlength="80"></div>
+          <input id="fPractice" autocomplete="off" maxlength="80"></div>
         </div>
         <label for="fEmail">Email <span class="req">*</span></label>
-        <input id="fEmail" type="email" autocomplete="off" inputmode="email" placeholder="jordan@brightsmiles.com" maxlength="90">
+        <input id="fEmail" type="email" autocomplete="off" inputmode="email" maxlength="90">
         <div class="frow">
           <div><label for="fPhone">Practice phone <span class="req">*</span></label>
-          <input id="fPhone" type="tel" autocomplete="off" inputmode="tel" placeholder="(555) 123-4567" maxlength="18"></div>
+          <input id="fPhone" type="tel" autocomplete="off" inputmode="tel" maxlength="18"></div>
           <div><label for="fZip">Practice ZIP code <span class="req">*</span></label>
-          <input id="fZip" autocomplete="off" inputmode="numeric" placeholder="33324" maxlength="5"></div>
+          <input id="fZip" autocomplete="off" inputmode="numeric" maxlength="5"></div>
         </div>
         <label for="fRole">Your role <span class="req">*</span></label>
         <select id="fRole">
@@ -3268,6 +3268,71 @@ const SavingsCatcher = {
 /* ============================================================
    Boot
    ============================================================ */
+/* Booth idle auto-reset: if a signed-in session (or a half-typed form) sits
+   untouched for 3 minutes outside active gameplay, warn for 20 seconds, then
+   clear the session so the station is fresh for the next visitor. */
+const IdleReset = {
+  last: Date.now(), warnAfterMs: 180000, el: null, cd: 0, cdTimer: null,
+  wire() {
+    ["pointerdown", "keydown", "touchstart"].forEach(ev =>
+      document.addEventListener(ev, () => {
+        this.last = Date.now();
+        if (this.el) this.dismiss();
+      }, { capture: true, passive: true }));
+    setInterval(() => this.check(), 5000);
+  },
+  eligible() {
+    if (Router.current === "scrForm") return true;
+    if (!Session.current) return false;
+    if (Router.current === "scrMenu") return true;
+    if (Router.current === "scrGame") return true; /* intro, end screens, or an abandoned run */
+    return false;
+  },
+  check() {
+    if (this.el || !this.eligible()) return;
+    if (Date.now() - this.last < this.warnAfterMs) return;
+    this.show();
+  },
+  show() {
+    this.cd = 20;
+    const el = document.createElement("div");
+    el.className = "modalbg on";
+    el.style.zIndex = "95";
+    el.innerHTML = '<div class="modal"><h3>Still playing?</h3>' +
+      '<p>This station resets for the next visitor in <b><span id="idleCd">20</span> seconds</b>. Your prize entry and scores are already saved.</p>' +
+      '<div class="mrow"><button class="mbtn primary" id="idleStay">I\'m still here</button></div></div>';
+    document.getElementById("app").appendChild(el);
+    this.el = el;
+    el.querySelector("#idleStay").addEventListener("click", () => this.dismiss());
+    this.cdTimer = setInterval(() => {
+      this.cd--;
+      const s = el.querySelector("#idleCd");
+      if (s) s.textContent = this.cd;
+      if (this.cd <= 0) this.reset();
+    }, 1000);
+  },
+  dismiss() {
+    clearInterval(this.cdTimer); this.cdTimer = null;
+    if (this.el) { this.el.remove(); this.el = null; }
+    this.last = Date.now();
+  },
+  reset() {
+    this.dismiss();
+    try {
+      if (Router.current === "scrGame") {
+        if (GameHost.running) {
+          GameHost.logPlay({ score: GameHost.game && GameHost.game.currentScore ? GameHost.game.currentScore() : 0, completed: false, resultLabel: "abandoned", detail: "idle reset" });
+        }
+        GameHost.stopGame();
+        GameHost.layer.innerHTML = "";
+      }
+    } catch (e) {}
+    Session.end();
+    LeadForm.reset();
+    Router.show("scrWelcome");
+  }
+};
+
 (function boot() {
   Store.load();
   Confirm.wire();
@@ -3275,6 +3340,7 @@ const SavingsCatcher = {
   Menu.wire();
   Staff.wire();
   GameHost.wire();
+  IdleReset.wire();
   $("#btnStart").addEventListener("click", () => {
     LeadForm.reset();
     Router.show("scrForm");
