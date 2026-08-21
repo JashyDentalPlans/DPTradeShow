@@ -800,6 +800,10 @@ function readMs(text) {
   return Math.min(9000, 1500 + w * 290);
 }
 
+/* Booth default: the deployed DP Arcade Leads webhook (Google Sheet).
+   Every device syncs here automatically; the staff dashboard can override per device. */
+const DEFAULT_WEBHOOK = "https://script.google.com/macros/s/AKfycbxzbjXmsFaK2zCNzMVIrpb2Xy3upQyrLyq8H0rn7daLJOFgbkgQatkAosAswZzd-bpg/exec";
+
 /* ---------- persistent store ---------- */
 const LS = {
   get(k, fb) {
@@ -818,7 +822,8 @@ const Store = {
     this.feedback = LS.get("dpts_feedback", []);
     this.scores = LS.get("dpts_scores", { trivia: [], catcher: [], champs: {} });
     if (!this.scores.champs) this.scores.champs = {};
-    this.cfg = LS.get("dpts_cfg", { webhookUrl: "", muted: false });
+    this.cfg = LS.get("dpts_cfg", { webhookUrl: DEFAULT_WEBHOOK, muted: false });
+    if (!this.cfg.webhookUrl) this.cfg.webhookUrl = DEFAULT_WEBHOOK;
   },
   saveLeads() { LS.set("dpts_leads", this.leads); },
   savePlays() { LS.set("dpts_plays", this.plays); },
